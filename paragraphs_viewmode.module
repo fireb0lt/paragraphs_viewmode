@@ -1,0 +1,24 @@
+<?php
+
+/**
+ * @file
+ * Contains paragraph_viewmode.module.
+ */
+
+use Drupal\Core\Routing\RouteMatchInterface;
+
+/**
+ * Implements hook_help().
+ */
+function paragraphs_viewmode_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    // Main module help for the paragraph_viewmode module.
+    case 'help.page.paragraph_viewmode':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('Allows you to select the paragraph view mode on a per paragraph basis') . '</p>';
+      return $output;
+
+    default:
+  }
+}
