@@ -6,6 +6,9 @@
  */
 
 use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\paragraphs\ParagraphInterface;
+use Drupal\paragraphs_viewmode\ParagraphsViewmodeBehaviorInterface;
 
 /**
  * Implements hook_help().
@@ -20,5 +23,20 @@ function paragraphs_viewmode_help($route_name, RouteMatchInterface $route_match)
       return $output;
 
     default:
+  }
+}
+
+/**
+ * Implements hook_entity_view_mode_alter().
+ */
+function paragraphs_viewmode_entity_view_mode_alter(&$view_mode, EntityInterface $entity, $context) {
+  if (!($entity instanceof ParagraphInterface)) {
+    return;
+  }
+  $paragraph_type = $entity->getParagraphType();
+  foreach ($paragraph_type->getEnabledBehaviorPlugins() as $plugin) {
+    if ($plugin instanceof ParagraphsViewmodeBehaviorInterface) {
+      $plugin->entityViewModeAlter($view_mode, $entity, $context);
+    }
   }
 }
