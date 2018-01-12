@@ -81,7 +81,6 @@ class ParagraphsViewmodeBehavior extends ParagraphsBehaviorBase implements Parag
    */
   public function buildConfigurationForm(array $form, FormStateInterface $form_state) {
     $view_modes = $this->entityDisplayRepository->getViewModeOptions('paragraph');
-
     $form['override_mode'] = [
       '#type' => 'select',
       '#title' => $this->t('Select which view mode to override'),
@@ -89,14 +88,32 @@ class ParagraphsViewmodeBehavior extends ParagraphsBehaviorBase implements Parag
       '#default_value' => $this->configuration['override_mode'],
     ];
     $form['override_available'] = [
-      '#type' => 'select',
+      '#type' => 'checkboxes',
       '#title' => $this->t('Select which view modes are allowable'),
       '#multiple' => TRUE,
       '#options' => $view_modes,
       '#default_value' => $this->configuration['override_available'],
     ];
-
+    $form['override_default'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Select default view mode for content to use'),
+      '#options' => $view_modes,
+      '#default_value' => $this->configuration['override_default'],
+    ];
     return parent::buildConfigurationForm($form, $form_state);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function validateConfigurationForm(array &$form, FormStateInterface $form_state) {
+    parent::validateConfigurationForm($form, $form_state);
+    $default = $form_state->getValue('override_default');
+    $allowed = array_filter($form_state->getValue('override_available'));
+
+    if (!in_array($default, $allowed)) {
+      $form_state->setError($form['override_default'], 'Default view mode must also be selected in allowed view modes');
+    }
   }
 
   /**
@@ -105,14 +122,11 @@ class ParagraphsViewmodeBehavior extends ParagraphsBehaviorBase implements Parag
   public function submitConfigurationForm(array &$form, FormStateInterface $form_state) {
     $override_mode = $form_state->getValue('override_mode');
     $override_available = $form_state->getValue('override_available');
-
-    /* Require the original mode in the allowed list */
-    if (!in_array($override_mode, $override_available)) {
-      $override_available[$override_mode] = $override_mode;
-    }
+    $override_default = $form_state->getValue('override_default');
 
     $this->configuration['override_mode'] = $override_mode;
     $this->configuration['override_available'] = $override_available;
+    $this->configuration['override_default'] = $override_default;
 
     parent::submitConfigurationForm($form, $form_state);
   }
@@ -123,7 +137,8 @@ class ParagraphsViewmodeBehavior extends ParagraphsBehaviorBase implements Parag
   public function defaultConfiguration() {
     return parent::defaultConfiguration() + [
       'override_mode' => 'default',
-      'override_available' => [],
+      'override_available' => ['default' => 'Default'],
+      'override_default' => 'default',
     ];
   }
 
@@ -132,8 +147,9 @@ class ParagraphsViewmodeBehavior extends ParagraphsBehaviorBase implements Parag
    */
   public function buildBehaviorForm(ParagraphInterface $paragraph, array &$form, FormStateInterface $form_state) {
     $all_modes = $this->entityDisplayRepository->getViewModeOptions('paragraph');
-    $mode = $paragraph->getBehaviorSetting($this->pluginId, 'view_mode', $this->configuration['override_mode']);
-    $mode_options = array_intersect_key($all_modes, $this->configuration['override_available']);
+    $available_modes = array_filter($this->configuration['override_available']);
+    $mode = $paragraph->getBehaviorSetting($this->pluginId, 'view_mode', $this->configuration['override_default']);
+    $mode_options = array_intersect_key($all_modes, $available_modes);
     $form['view_mode'] = [
       '#type' => 'select',
       '#title' => 'Select which view mode to use for this paragraph',
@@ -156,7 +172,7 @@ class ParagraphsViewmodeBehavior extends ParagraphsBehaviorBase implements Parag
    */
   public function entityViewModeAlter(&$view_mode, ParagraphInterface $paragraph, array $context) {
     $override_mode = $this->configuration['override_mode'];
-    $new_view_mode = $paragraph->getBehaviorSetting($this->pluginId, 'view_mode', $override_mode);
+    $new_view_mode = $paragraph->getBehaviorSetting($this->pluginId, 'view_mode', $this->configuration['override_default']);
 
     if ($view_mode != $override_mode || $override_mode == $new_view_mode) {
       return;
