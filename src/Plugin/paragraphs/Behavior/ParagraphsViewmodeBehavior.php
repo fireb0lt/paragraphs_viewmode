@@ -23,7 +23,6 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * )
  */
 class ParagraphsViewmodeBehavior extends ParagraphsBehaviorBase implements ParagraphsViewmodeBehaviorInterface {
-  use StringTranslationTrait;
 
   /**
    * The entity Display Repository.
